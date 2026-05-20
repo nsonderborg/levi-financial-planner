@@ -2,8 +2,6 @@
 
 A fully local personal finance system for Danish bank accounts and investment portfolios. Parses real bank exports, categorises spending, tracks budgets, runs AI analysis via a local LLM, and syncs curated summaries to Notion — with no raw transaction data ever leaving your machine.
 
-> **Planned:** Revolut CSV support (same `_normalise()` pipeline, format profile extension only — no architectural change needed).
-
 ---
 
 ## What Levi does
@@ -12,10 +10,11 @@ A fully local personal finance system for Danish bank accounts and investment po
 Bank exports (CSV / .numbers / PDF)
         │
         ▼  Parse & normalise
-        │  Nordea CSV · Nordea Numbers · Saxo Bank PDF · Saxo Numbers
+        │  Nordea CSV · Nordea Numbers · Saxo Bank PDF · Saxo Numbers · Revolut Numbers
         │
         ▼  Categorise & deduplicate
         │  Keyword rules + per-transaction overrides (persisted in config/)
+        │  └─ LLM fallback: uncategorised rows sent to local Ollama for one-shot classification
         │
         ▼  Analyse
         │  Streamlit dashboard · CLI reports · Local Ollama LLM · Claude API (opt-in)
@@ -31,6 +30,7 @@ Bank exports (CSV / .numbers / PDF)
 | Source | Formats | How |
 |---|---|---|
 | Nordea bank statement | `.csv`, `.numbers` | Drop into `data/inbox/`, click Scan in sidebar |
+| Revolut consolidated statement | `.numbers` | Drop into `data/inbox/` (filename must contain "revolut") |
 | Saxo Bank portfolio report | `.pdf` | Upload in Tab 5 |
 | Saxo Bank account statement | `.numbers` | Drop into `data/inbox/` |
 | User profile | Form in Tab 5 | Age, income, goals, savings target |
@@ -69,6 +69,15 @@ Merges all processed files, deduplicates on `(dato, beløb, label)`. Multiple fi
 
 Rules and overrides persist in `config/categories.json`.
 
+### 5. LLM fallback categorisation (optional) — Tab 2
+
+Rows still labelled `Andet` after keyword matching can be sent to a local Ollama model for one-shot classification. A single button in Tab 2 sends all uncategorised rows in one batch; results are merged back as overrides and immediately saved.
+
+- **Prompt**: fill-in-the-blank — `Transaction: "X" | Pick one: … | Category:` — temperature 0, 20 token limit
+- **Model**: any Ollama model; `llama3.1:8b` recommended (3B models tend to wrap answers in prose)
+- **Privacy**: runs entirely on localhost — no transaction data leaves the machine
+- **Keyword rules take priority**: for any merchant that appears repeatedly, add a keyword rule instead — it's faster and permanent
+
 ### 5. Context building
 
 Three functions compose the AI prompt context:
@@ -90,7 +99,7 @@ Merchant-level detail (`TOP 10 UDGIFTER` section) is stripped before any Claude 
 | Tab | Content |
 |---|---|
 | **1 Dashboard** | Income / expenses / net / savings rate metrics; category bar chart; budget progress bars (green <80 %, yellow 80–100 %, red >100 %) |
-| **2 Transaktioner** | Filterable table (category, type, date range, Afstemt); inline category reassignment; keyword rule editor; reconciliation checkboxes (auto-saved) |
+| **2 Transaktioner** | Filterable table (category, type, date range, Afstemt); inline category reassignment; keyword rule editor; reconciliation checkboxes (auto-saved); one-click LLM batch categorisation for remaining `Andet` rows |
 | **3 AI Chat** | Local Ollama (Finansanalytiker) or Claude API (opt-in, sidebar toggle) — full conversation, context-seeded |
 | **4 Livs-Roadmap** | **BlackRock** (Ollama, long-horizon plan) · **Goldman Sachs** (Claude API, wealth diagnostic) · **Morgan Stanley** (Claude API, portfolio architect) · **Wealthfront** (Claude API, real estate analyser) — Claude personas behind explicit confirmation checkboxes |
 | **5 Profil & Rapporter** | Profile form; balance sheet form; budget targets; Saxo PDF uploader; local report viewer |
@@ -191,7 +200,8 @@ pip install -r requirements.txt
 
 # 2. Install and start Ollama
 brew install ollama
-ollama pull qwen2.5:7b
+ollama pull llama3.1:8b   # recommended for LLM categorisation (Tab 2)
+ollama pull qwen2.5:7b    # recommended for AI chat + reports (Tab 3/4)
 ollama serve
 
 # 3. Configure

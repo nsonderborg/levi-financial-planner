@@ -122,7 +122,7 @@ def generate(days: int, count: int, seed: int) -> list[list]:
             except ValueError:
                 tx_date = date(yr, mo, 28)
             if start <= tx_date <= end:
-                afs = "Nikolas Nogueira Sønderborg" if amount > 0 else ""
+                afs = "Test Person" if amount > 0 else ""
                 mod = navn if amount < 0 else ""
                 transactions.append((tx_date, amount, navn, navn, afs, mod))
 
@@ -145,7 +145,7 @@ def generate(days: int, count: int, seed: int) -> list[list]:
         navn, _, base_amount, _ = random.choices(variable_merchants, weights=weights, k=1)[0]
         amount   = round(base_amount * random.uniform(0.75, 1.30), 2)
         tx_date  = start + timedelta(days=random.randint(0, days))
-        afsender = "Nikolas Nogueira Sønderborg" if amount > 0 else ""
+        afsender = "Test Person" if amount > 0 else ""
         modtager = navn if amount < 0 else ""
         transactions.append((tx_date, amount, navn, navn, afsender, modtager))
 

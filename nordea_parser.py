@@ -126,6 +126,51 @@ def save_categories(config_dir: Path, data: dict):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+def llm_categorize_batch(rows: list[dict], ollama_url: str, model: str = "llama3") -> tuple[dict[str, str], str]:
+    """Classify each row individually via Ollama /api/generate.
+
+    One API call per row with a fill-in-the-blank prompt and num_predict=20 so
+    the model cannot ramble. Returns ({override_key: category}, debug_log).
+    Raises on network/API errors so callers can surface the message.
+    """
+    generate_url = ollama_url.replace("/api/chat", "/api/generate")
+    categories = [c for c in CATEGORIES if c != "Andet"]
+    cat_lower = {c.lower(): c for c in categories}
+    cat_list = ", ".join(categories)
+
+    result = {}
+    debug_lines = []
+    for row in rows:
+        label = str(row.get("label") or row.get("beskrivelse") or "").strip()
+        amount = row.get("beløb", 0)
+        # Fill-in-the-blank: model sees "Category:" and completes with one word/phrase
+        prompt = (
+            f'Transaction: "{label}" ({amount:+.2f} DKK)\n'
+            f"Pick one category from: {cat_list}\n"
+            f"Category:"
+        )
+        resp = requests.post(
+            generate_url,
+            json={"model": model, "prompt": prompt, "stream": False,
+                  "options": {"temperature": 0, "num_predict": 20}},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if "error" in data:
+            raise RuntimeError(data["error"])
+        raw = data["response"].strip().split("\n")[0].strip().rstrip(".")
+        debug_lines.append(f"{label!r} → {raw!r}")
+        # Model often wraps the answer in quotes: 'I vil vælge "Dagligvarer" som…'
+        quoted = re.search(r'"([^"]+)"', raw)
+        candidate = quoted.group(1).strip() if quoted else raw
+        cat = candidate if candidate in CATEGORIES else cat_lower.get(candidate.lower())
+        if cat:
+            result[_override_key(row)] = cat
+
+    return result, "\n".join(debug_lines)
+
+
 def load_reconciled(config_dir: Path) -> dict:
     """Load reconciliation state from config/reconciled.json.
 

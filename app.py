@@ -13,7 +13,7 @@ load_dotenv()
 
 from nordea_parser import (
     parse_any, load_all_processed, build_context, build_balance_sheet_context,
-    load_categories, save_categories, recategorize,
+    load_categories, save_categories, recategorize, llm_categorize_batch,
     load_reconciled, save_reconciled,
     parse_saxo_pdf, fetch_gold_price_dkk, fetch_gold_history_dkk,
 )
@@ -651,6 +651,34 @@ with tab2:
                     st.warning(f"'{new_cat_name}' findes allerede.")
                 else:
                     st.warning("Angiv et kategorinavn.")
+
+            st.divider()
+            st.markdown("**AI-kategorisering**")
+            andet_rows = df[df["kategori"] == "Andet"].to_dict("records")
+            if andet_rows:
+                st.caption(f"{len(andet_rows)} transaktioner er i kategorien _Andet_")
+                llm_model = st.text_input("Ollama model", value="llama3", key="llm_cat_model")
+                if st.button("🤖 Kategoriser ukendte med AI"):
+                    try:
+                        with st.spinner(f"Spørger Ollama ({llm_model}) — {len(andet_rows)} transaktioner…"):
+                            new_overrides, raw_text = llm_categorize_batch(
+                                andet_rows,
+                                ollama_url=OLLAMA_URL,
+                                model=llm_model,
+                            )
+                        if new_overrides:
+                            overrides.update(new_overrides)
+                            save_categories(CONFIG_DIR, {"rules": rules, "overrides": overrides})
+                            st.success(f"✅ {len(new_overrides)} transaktioner kategoriseret")
+                            st.rerun()
+                        else:
+                            st.warning("Ingen gyldige kategorier fundet i svar.")
+                            with st.expander("LLM-svar (debug)"):
+                                st.text(raw_text)
+                    except Exception as e:
+                        st.error(f"Fejl: {e}")
+            else:
+                st.caption("Ingen _Andet_-transaktioner at kategorisere.")
 
 # ── TAB 3 ─────────────────────────────────────────────────────────────────────
 with tab3:

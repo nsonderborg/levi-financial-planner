@@ -2,6 +2,9 @@
 
 A fully local personal finance system for Danish bank accounts and investment portfolios. Parses real bank exports, categorises spending, tracks budgets, runs AI analysis via a local LLM, and syncs curated summaries to Notion — with no raw transaction data ever leaving your machine.
 
+<img width="1710" height="1031" alt="image" src="https://github.com/user-attachments/assets/28e39bfc-2f70-4df0-8c18-90c6863e66d4" />
+
+
 ---
 
 ## What Levi does

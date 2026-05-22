@@ -1,8 +1,8 @@
 # Levi — Personal Finance OS
 
-A fully local personal finance system for Danish bank accounts and investment portfolios. Parses real bank exports, categorises spending, tracks budgets, runs AI analysis via a local LLM, and syncs curated summaries to Notion — with no raw transaction data ever leaving your machine.
+A fully local personal finance OS for multiple bank accounts (Nordea, Revolut) and investment portfolios (Saxo Bank and physical gold). Parses real bank exports across CSV, Numbers, and PDF formats; categorises spending via keyword rules with a local LLM fallback for uncategorised transactions; tracks budgets; and answers financial questions in natural language. Features a two-tier AI engine — local Ollama for private full-context analysis, and opt-in Claude API personas (Goldman Sachs wealth advisor, Morgan Stanley investment advisor, etc.) for high-level wealth diagnostics. Syncs curated summaries to Notion with no raw transaction data ever leaving your machine.
 
-<img width="1710" height="1031" alt="image" src="https://github.com/user-attachments/assets/28e39bfc-2f70-4df0-8c18-90c6863e66d4" />
+<img width="1920" height="988" alt="Screenshot 2026-05-22 at 15 46 20" src="https://github.com/user-attachments/assets/9e923635-3edb-474c-bc96-2c42fa9b0dce" />
 
 
 ---
